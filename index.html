@@ -15,6 +15,53 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased">
 
+<!-- TELA DE PEGADINHA / SIMULAÇÃO DE GOLPE -->
+<div id="prank-overlay" class="fixed inset-0 bg-slate-950 text-white z-50 flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-slate-900 border-2 border-rose-600 rounded-2xl p-6 shadow-2xl text-center">
+    
+    <!-- Fase 1: O Susto (Carregamento falso) -->
+    <div id="prank-scare">
+      <div class="text-5xl mb-3 animate-bounce">⚠️</div>
+      <h2 class="text-xl font-extrabold text-rose-500 uppercase tracking-wide mb-2">
+        Acesso Não Autorizado Detectado
+      </h2>
+      <p class="text-slate-300 text-xs mb-4">
+        Conexão estabelecida via link externo. Extraindo pacotes do dispositivo...
+      </p>
+
+      <!-- Dados reais do aparelho para dar realismo -->
+      <div class="bg-black/60 border border-rose-500/30 rounded-lg p-3 text-left font-mono text-xs text-rose-300 space-y-1 mb-4">
+        <p id="device-info">> Aparelho: Identificando...</p>
+        <p id="status-step">> Status: Capturando tokens de sessão...</p>
+      </div>
+
+      <!-- Barra de progresso vermelha -->
+      <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden mb-2">
+        <div id="prank-bar" class="bg-rose-600 h-full transition-all duration-300" style="width: 15%"></div>
+      </div>
+      <p id="prank-pct" class="text-xs font-mono text-rose-400">15% concluído</p>
+    </div>
+
+    <!-- Fase 2: A Revelação Educativa (Aparece após 3.5 segundos) -->
+    <div id="prank-reveal" class="hidden">
+      <div class="text-5xl mb-3">😅🛡️</div>
+      <h2 class="text-2xl font-extrabold text-emerald-400 mb-2">
+        Calma! Foi só um teste!
+      </h2>
+      <p class="text-slate-300 text-sm leading-relaxed mb-4">
+        Nenhum dado seu foi coletado. Mas viu como é fácil clicar em um link no WhatsApp sem checar a origem? <strong>Se este fosse um link criminoso, seu aparelho poderia estar comprometido agora.</strong>
+      </p>
+      <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-400 mb-5">
+        Este é um projeto educativo da disciplina de <strong>Cibercultura</strong>. Aprenda a se proteger e faça nosso teste rápido!
+      </div>
+      <button onclick="closePrank()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg">
+        Acessar o Guia e Fazer o Quiz →
+      </button>
+    </div>
+
+  </div>
+</div>
+
   <!-- Cabeçalho / Navbar -->
   <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
     <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
@@ -485,6 +532,54 @@
 
     // Inicializar Quiz
     loadQuestion();
+
+      // LÓGICA DA PEGADINHA DE ENTRADA
+    function detectarAparelho() {
+      const ua = navigator.userAgent;
+      if (/iPhone/i.test(ua)) return "Apple iPhone (iOS)";
+      if (/Android/i.test(ua)) return "Smartphone Android";
+      if (/Windows/i.test(ua)) return "Computador Windows";
+      if (/Mac/i.test(ua)) return "Mac / macOS";
+      return "Dispositivo conectado (" + navigator.platform + ")";
+    }
+
+    function iniciarPegadinha() {
+      // Se a pessoa já viu o susto nesta sessão, não repete ao recarregar a página
+      if (sessionStorage.getItem("susto_visto")) {
+        document.getElementById("prank-overlay").classList.add("hidden");
+        return;
+      }
+
+      document.getElementById("device-info").innerText = "> Aparelho: " + detectarAparelho();
+      
+      const steps = [
+        { pct: 42, text: "> Lendo cache do navegador..." },
+        { pct: 78, text: "> Verificando credenciais salvas..." },
+        { pct: 99, text: "> Pacote pronto para envio..." }
+      ];
+
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < steps.length) {
+          document.getElementById("prank-bar").style.width = steps[i].pct + "%";
+          document.getElementById("prank-pct").innerText = steps[i].pct + "% concluído";
+          document.getElementById("status-step").innerText = steps[i].text;
+          i++;
+        } else {
+          clearInterval(interval);
+          document.getElementById("prank-scare").classList.add("hidden");
+          document.getElementById("prank-reveal").classList.remove("hidden");
+        }
+      }, 1100);
+    }
+
+    function closePrank() {
+      sessionStorage.setItem("susto_visto", "sim");
+      document.getElementById("prank-overlay").classList.add("hidden");
+    }
+
+    // Dispara assim que o site abre
+    iniciarPegadinha();
   </script>
 </body>
 </html>
