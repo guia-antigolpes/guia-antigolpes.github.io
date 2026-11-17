@@ -19,9 +19,9 @@
   <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
     <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center gap-2 font-bold text-lg tracking-tight">
-        <span class="text-emerald-400">🛡️</span> Radar Digital
+        <span class="text-emerald-400">🛡️</span> Guia Antigolpes
       </div>
-      <nav class="flex gap-4 text-sm font-medium">
+      <nav class="flex gap-4 text-sm font-medium items-center">
         <a href="#blog" class="hover:text-emerald-400 transition">Artigos</a>
         <a href="#quiz" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold px-3 py-1.5 rounded-lg transition">
           Fazer o Quiz
@@ -82,7 +82,7 @@
     <div class="max-w-2xl mx-auto">
       <div class="text-center mb-8">
         <h2 class="text-2xl sm:text-3xl font-bold">Termômetro de Segurança Digital</h2>
-        <p class="text-slate-400 text-sm mt-1">Responda a situações reais do dia a dia e descubra se você está protegido.</p>
+        <p class="text-slate-400 text-sm mt-1">Responda a situações reais do dia a dia e compare seu resultado com o de outras pessoas.</p>
       </div>
 
       <!-- Container do Quiz -->
@@ -108,12 +108,35 @@
           </button>
         </div>
 
-        <!-- Tela de Resultado Final -->
+        <!-- Tela de Resultado Final + Estatísticas do Firebase -->
         <div id="quiz-result" class="hidden text-center py-4">
           <div id="result-badge" class="text-5xl mb-3"></div>
           <h3 id="result-title" class="text-2xl font-bold mb-2"></h3>
           <p id="result-score" class="text-emerald-400 font-semibold mb-3"></p>
           <p id="result-desc" class="text-slate-300 text-sm mb-6 leading-relaxed"></p>
+
+          <!-- Painel de Estatísticas da Comunidade (Firebase) -->
+          <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-4 mb-6 text-left">
+            <div class="flex justify-between items-center mb-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                📊 Desempenho da Comunidade
+              </h4>
+              <span id="total-players" class="text-xs text-emerald-400 font-semibold">
+                Sincronizando...
+              </span>
+            </div>
+
+            <!-- Destaque da Média Geral -->
+            <div class="bg-slate-800/80 border border-slate-700/70 rounded-lg p-3 mb-4 flex items-center justify-between">
+              <span class="text-xs text-slate-300">Média geral de acertos:</span>
+              <span id="community-average" class="text-sm font-bold text-emerald-400">--</span>
+            </div>
+
+            <!-- Barras de Distribuição por Nota -->
+            <div id="stats-bars" class="space-y-2.5 text-xs">
+              <p class="text-slate-400 py-2">Carregando pontuações...</p>
+            </div>
+          </div>
 
           <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <button onclick="shareOnWhatsApp()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3 px-5 rounded-xl transition flex items-center justify-center gap-2">
@@ -134,9 +157,12 @@
     <p class="mt-1">Compartilhe este link com amigos e familiares para ajudar a combater golpes digitais.</p>
   </footer>
 
-  <!-- Script com Conteúdo do Blog e Lógica do Quiz -->
+  <!-- Script Principal -->
   <script>
-    // 1. DADOS DO BLOG (Fácil para o grupo adicionar ou editar artigos)
+
+    const DB_URL = "https://console.firebase.google.com/project/guia-antigolpes/database/guia-antigolpes-default-rtdb/data/~2F/scores.json";
+
+    // 1. DADOS DO BLOG
     const blogPosts = [
       {
         tag: "Phishing",
@@ -159,7 +185,7 @@
         content: `
           <p>Clonar ou assumir uma conta de WhatsApp é um dos golpes mais comuns no Brasil. O criminoso finge ser de uma empresa (ou de um site onde você anunciou algo) e pede um <strong>código de 6 dígitos</strong> que acabou de chegar por SMS no seu celular.</p>
           <p><strong>Regra de ouro:</strong> Esse código é a chave de instalação do seu próprio WhatsApp em outro aparelho. <strong>Jamais informe números recebidos por SMS a ninguém.</strong></p>
-          <p><strong>Blindagem rápida:</strong> Vá em <em>Configurações > Conta > Confirmação em duas etapas</em> no WhatsApp e crie uma senha de 6 dígitos.</p>
+          <p><strong>Blindagem rápida:</strong> Vá em <em>Configurações &rarr; Conta &rarr; Confirmação em duas etapas</em> no WhatsApp e crie uma senha de 6 dígitos.</p>
         `
       },
       {
@@ -190,7 +216,6 @@
       }
     ];
 
-    // Renderizar artigos do blog
     const blogGrid = document.getElementById("blog-grid");
     blogPosts.forEach((post, index) => {
       blogGrid.innerHTML += `
@@ -340,7 +365,7 @@
       }
     }
 
-    function showResults() {
+    async function showResults() {
       document.getElementById("quiz-header").classList.add("hidden");
       document.getElementById("quiz-body").classList.add("hidden");
       const resultDiv = document.getElementById("quiz-result");
@@ -353,7 +378,7 @@
         document.getElementById("result-badge").innerText = "🛡️";
         document.getElementById("result-title").innerText = "Blindado Digital!";
         document.getElementById("result-desc").innerText = "Excelente! Você conhece muito bem as táticas de engenharia social e phishing. Continue atento e compartilhe o teste com a família!";
-      } else if (score >= 3) {
+      } else if (score >= Math.ceil(total * 0.6)) {
         document.getElementById("result-badge").innerText = "🧐";
         document.getElementById("result-title").innerText = "Atento, mas cuidado com a pressa!";
         document.getElementById("result-desc").innerText = "Você já identifica a maioria das armadilhas, mas ainda pode escorregar em golpes mais elaborados. Dê uma lida nos cartões do nosso Guia acima!";
@@ -361,6 +386,85 @@
         document.getElementById("result-badge").innerText = "🚨";
         document.getElementById("result-title").innerText = "Alerta Ligado: Alvo Vulnerável";
         document.getElementById("result-desc").innerText = "Cuidado! Golpistas se aproveitam da distração do dia a dia. Leia os artigos rápidos do nosso blog acima e ative a verificação em duas etapas hoje mesmo.";
+      }
+
+      await saveAndLoadStats(score);
+    }
+
+    // 3. INTEGRAÇÃO COM O FIREBASE REALTIME DATABASE + CÁLCULO DE MÉDIA
+    async function saveAndLoadStats(userScore) {
+      const statsContainer = document.getElementById("stats-bars");
+      const totalPlayersEl = document.getElementById("total-players");
+      const averageEl = document.getElementById("community-average");
+      const totalQuestions = quizQuestions.length;
+
+      if (DB_URL.includes("SEU-PROJETO")) {
+        totalPlayersEl.innerText = "Banco não configurado";
+        averageEl.innerText = "--";
+        statsContainer.innerHTML = `<p class="text-amber-400">Cole a URL do seu Firebase na constante <strong>DB_URL</strong> do código para ativar o placar.</p>`;
+        return;
+      }
+
+      try {
+        // 1. Grava a nota atual no Firebase
+        await fetch(DB_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            score: userScore,
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        // 2. Busca todas as notas registradas
+        const response = await fetch(DB_URL);
+        const data = await response.json();
+
+        if (!data) return;
+
+        const entries = Object.values(data);
+        const counts = new Array(totalQuestions + 1).fill(0);
+        let validPlayers = 0;
+        let sumScores = 0;
+
+        entries.forEach(item => {
+          if (typeof item.score === "number" && item.score >= 0 && item.score <= totalQuestions) {
+            counts[item.score]++;
+            sumScores += item.score;
+            validPlayers++;
+          }
+        });
+
+        // 3. Atualiza o total de participantes e a Média Geral da Comunidade
+        totalPlayersEl.innerText = `${validPlayers} ${validPlayers === 1 ? "participação" : "participações"}`;
+
+        if (validPlayers > 0) {
+          const avgScore = (sumScores / validPlayers).toFixed(1);
+          const avgPct = Math.round((sumScores / (validPlayers * totalQuestions)) * 100);
+          averageEl.innerText = `${avgScore} de ${totalQuestions} (${avgPct}%)`;
+        }
+
+        // 4. Renderiza as barras de proporção por nota
+        statsContainer.innerHTML = "";
+        for (let s = totalQuestions; s >= 0; s--) {
+          const qtd = counts[s];
+          const pct = validPlayers > 0 ? Math.round((qtd / validPlayers) * 100) : 0;
+          const isUserScore = s === userScore;
+
+          statsContainer.innerHTML += `
+            <div class="flex items-center gap-2 ${isUserScore ? "text-emerald-300 font-bold" : "text-slate-300"}">
+              <span class="w-24 shrink-0">${s} ${s === 1 ? "acerto" : "acertos"} ${isUserScore ? "(Você)" : ""}</span>
+              <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                <div class="${isUserScore ? "bg-emerald-400" : "bg-slate-500"} h-full transition-all duration-500" style="width: ${pct}%"></div>
+              </div>
+              <span class="w-16 text-right shrink-0 text-slate-400">${qtd} (${pct}%)</span>
+            </div>
+          `;
+        }
+      } catch (err) {
+        totalPlayersEl.innerText = "Modo offline";
+        averageEl.innerText = "--";
+        statsContainer.innerHTML = `<p class="text-slate-400">Não foi possível carregar o comparativo no momento.</p>`;
       }
     }
 
